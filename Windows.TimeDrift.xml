@@ -2,7 +2,7 @@
   <Manifest>
     <Identity>
       <ID>Windows.TimeDrift</ID>
-      <Version>1.0.0.0</Version>
+      <Version>1.0.0.1</Version>
     </Identity>
     <Name>Windows.TimeDrift</Name>
     <References>
@@ -94,6 +94,7 @@
 #  Time Skew Monitoring Script
 #  Kevin Holman
 #  Version 1.0
+#  Updated by Matt Bergeron (Tangerine Global) to retry if it catches error '0x800705B4'
 #=================================================================================
 param([string]$RefServer,[int]$Threshold)
 
@@ -103,7 +104,7 @@ param([string]$RefServer,[int]$Threshold)
 
 # Assign script name variable for use in event logging
 $ScriptName = "Windows.TimeDrift.PA.ps1"
-# Set samples to the number of w32time samples you wish to include 
+# Set samples to the number of w32time samples you wish to include
 [int]$Samples = '1'
 # For testing - assign values instead of paramtersto the script
 #[string]$RefServer = 'dc1.opsmgr.net'
@@ -111,12 +112,12 @@ $ScriptName = "Windows.TimeDrift.PA.ps1"
 #=================================================================================
 
 # Gather script start time
-$StartTime = Get-Date             
+$StartTime = Get-Date
 
 # Gather who the script is running as
 $WhoAmI = whoami
 
-# Load MomScript API and PropertyBag function 
+# Load MomScript API and PropertyBag function
 $momapi = new-object -comObject 'MOM.ScriptAPI'
 $bag = $momapi.CreatePropertyBag()
 
@@ -128,18 +129,24 @@ $momapi.LogScriptEvent($ScriptName,9250,0, "Starting script")
 
 #Getting the required data
 $cmd = w32tm /stripchart /computer:$RefServer /dataonly /samples:$Samples
+#If you get an error on the first try, try it again
+IF ($cmd -match '0x800705B4')
+{
+	Sleep 2
+	$cmd = w32tm /stripchart /computer:$RefServer /dataonly /samples:$Samples
+}
 
 IF ($cmd -match 'error')
 {
-  #Log error and quit
-  $momapi.LogScriptEvent($ScriptName,9250,2, "Getting TimeDrift from Reference Server returned an error .  Reference server is ($RefServer).  Output of command is ($cmd)")
-  exit
+	#Log error and quit
+	$momapi.LogScriptEvent($ScriptName,9250,2, "Getting TimeDrift from Reference Server returned an error. Reference server is ($RefServer). Output of command is ($cmd)")
+	exit
 }
 ELSE
 {
-  #Assume we got good results from cmd
-  $Skew = $cmd[-1..($Samples * -1)] | ConvertFrom-Csv -Header "Time","Skew" | Select -ExpandProperty Skew
-  $Result = $Skew | % { $_ -replace "s","" }   | Measure-Object -Average | select -ExpandProperty Average
+	#Assume we got good results from cmd
+	$Skew = $cmd[-1..($Samples * -1)] | ConvertFrom-Csv -Header "Time","Skew" | Select -ExpandProperty Skew
+	$Result = $Skew | % { $_ -replace "s","" } | Measure-Object -Average | select -ExpandProperty Average
 }
 
 #The problem is that you can have time skew in two directions: positive or negative. You can do two
@@ -151,14 +158,14 @@ $TimeDriftSeconds = [math]::Round($Result,2)
 #Determine if the average time skew is higher than your threshold and report this back to SCOM.
 IF ($TimeDriftSeconds -gt $Threshold)
 {
-  $bag.AddValue("TimeSkew","True")
-  $momapi.LogScriptEvent($ScriptName,9250,2, "Time Drift was detected.  Reference server is ($RefServer).  Threshold is ($Threshold) seconds.  Value is ($TimeDriftSeconds) seconds")
+	$bag.AddValue("TimeSkew","True")
+	$momapi.LogScriptEvent($ScriptName,9250,2, "Time Drift was detected. Reference server is ($RefServer). Threshold is ($Threshold) seconds. Value is ($TimeDriftSeconds) seconds")
 }
 ELSE
 {
-  $bag.AddValue("TimeSkew","False")
-  #Log good event for testing
-  #$momapi.LogScriptEvent($ScriptName,9250,0, "Time Drift was OK.  Reference server is ($RefServer).  Threshold is ($Threshold) seconds.  Value is ($TimeDriftSeconds) seconds") 
+	$bag.AddValue("TimeSkew","False")
+	#Log good event for testing
+	#$momapi.LogScriptEvent($ScriptName,9250,0, "Time Drift was OK. Reference server is ($RefServer). Threshold is ($Threshold) seconds. Value is ($TimeDriftSeconds) seconds")
 }
 
 #Add stuff into the propertybag
@@ -172,7 +179,7 @@ $ScriptTime = ($EndTime - $StartTime).TotalSeconds
 $ScriptTime = [math]::Round($ScriptTime,2)
 $momapi.LogScriptEvent($ScriptName,9250,0,"`n Script has completed. `n Reference server is ($RefServer). `n Threshold is ($Threshold) seconds. `n Value is ($TimeDriftSeconds) seconds. `n Runtime was ($ScriptTime) seconds.")
 
-#Output the propertybag  
+#Output the propertybag
 $bag
 </ScriptBody>
                 <Parameters>
