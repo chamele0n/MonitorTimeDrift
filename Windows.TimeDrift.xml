@@ -2,7 +2,7 @@
   <Manifest>
     <Identity>
       <ID>Windows.TimeDrift</ID>
-      <Version>1.0.0.1</Version>
+      <Version>1.0.0.2</Version>
     </Identity>
     <Name>Windows.TimeDrift</Name>
     <References>
@@ -107,7 +107,7 @@ $ScriptName = "Windows.TimeDrift.PA.ps1"
 # Set samples to the number of w32time samples you wish to include
 [int]$Samples = '1'
 # For testing - assign values instead of paramtersto the script
-#[string]$RefServer = 'dc1.opsmgr.net'
+#[string]$RefServer = 'time.iptvtg.com'
 #[int]$Threshold = '10'
 #=================================================================================
 
@@ -294,7 +294,7 @@ $bag
         <DataSources>
           <DataSource ID="DataSource" TypeID="Windows.TimeDrift.DS">
             <IntervalSeconds>3600</IntervalSeconds>
-            <RefServer>dc1.opsmgr.net</RefServer>
+            <RefServer>time.iptvtg.com</RefServer>
             <Threshold>200</Threshold>
           </DataSource>
         </DataSources>
@@ -411,7 +411,7 @@ $bag
         </OperationalStates>
         <Configuration>
           <IntervalSeconds>3600</IntervalSeconds>
-          <RefServer>dc1.opsmgr.net</RefServer>
+          <RefServer>time.iptvtg.com</RefServer>
           <Threshold>200</Threshold>
         </Configuration>
       </UnitMonitor>
