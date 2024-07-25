@@ -2,7 +2,7 @@
   <Manifest>
     <Identity>
       <ID>Windows.TimeDrift</ID>
-      <Version>1.0.0.2</Version>
+      <Version>1.0.0.3</Version>
     </Identity>
     <Name>Windows.TimeDrift</Name>
     <References>
